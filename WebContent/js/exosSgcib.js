@@ -14,7 +14,7 @@ $('#rpnSubmit').click(function (e) {
 			async : false,
 			success : function(data) {
 				console.log("Calling rpn ok");
-				$('#rpn').val(data);
+				$('#rpn').val(data.output);
 			},
 			error : function(data) {
 				console.log("Error while rpn");		

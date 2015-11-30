@@ -1,7 +1,9 @@
 package com.soat.exosSgcib.itf;
 
+import com.soat.exosSgcib.model.RpnOperator;
+
 public interface RpnCalculatorItf {
 
-	public String computeRpnCalculators(String input);
+	public RpnOperator computeRpnCalculators(String input);
 	
 }

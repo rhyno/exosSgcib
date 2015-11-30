@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Stack;
 import java.util.function.BiFunction;
 
 import javax.enterprise.context.SessionScoped;
@@ -18,6 +19,7 @@ import javax.ws.rs.core.MediaType;
 import org.jboss.logging.Logger;
 
 import com.soat.exosSgcib.itf.RpnCalculatorItf;
+import com.soat.exosSgcib.model.RpnOperator;
 import com.soat.exosSgcib.utils.OperatorRpnQual;
 
 @Path("/rpn")
@@ -36,17 +38,26 @@ public class RpnCalculator implements Serializable, RpnCalculatorItf{
 	
 	
 	private transient @Inject @OperatorRpnQual Map<String,BiFunction<Float,Float,Float>> operators;
-		
+	
+	
 	@GET
 	@Path("/compute")
-	public String computeRpnCalculators(@QueryParam("input") String input) {
+	public RpnOperator computeRpnCalculators(@QueryParam("input") String input) {
 		
 		_l.info("Receiving input :" + input);
 		
-		String result = new String();
-			
-				
-		result = this.recursiveCompute(input.split("\\s+"))[0];
+		RpnOperator result = new RpnOperator();
+		
+		String resultedString = new String();
+		Stack<String> stackCompute = new Stack<String>();
+		stackCompute.addAll(Arrays.asList(input.split("\\s+")));
+		
+		while(!stackCompute.isEmpty()){
+			resultedString = this.recursiveCompute(stackCompute) + " " + resultedString;
+		}
+		
+		result.setInput(input);
+		result.setOutput(resultedString.toString());
 		
 		return result;
 	}
@@ -56,44 +67,46 @@ public class RpnCalculator implements Serializable, RpnCalculatorItf{
 	 * @param input
 	 * @return
 	 */
-	private String[] recursiveCompute(String[] input){
+	private String recursiveCompute(Stack<String> input){
 		_l.info("recursiveCompute :");
-		String[] result = new String[1];
+		String result = "";
 		
-		if(input.length > 0){
-			
+		
+		if(!input.isEmpty()){
+			String firstEntry = input.pop();
 			try{
 				_l.info("checking if first element is a number");
-				Float.parseFloat(input[input.length-1]);
+				Float.parseFloat(firstEntry);
 				_l.info("first element is a number");
-				result[0] = input[input.length-1];
+				result = firstEntry;
+				
 			}catch(NumberFormatException e){
 				_l.info("first element is not a number");
 				// Si une exception se leve on doit avoir un operateur
 				_l.info("checking operator type");
-				if(operators.containsKey(input[input.length-1])){
-					_l.info("operator is : " + input[input.length-1]);
+				if(operators.containsKey(firstEntry)){
+					_l.info("operator is : " + firstEntry);
 					_l.info("Trying to define E1 : ");
-					String[] newInput = Arrays.copyOf(input, input.length-1);
-					String[] e1Tab = recursiveCompute(newInput);
-					_l.info(" E1 is : " + e1Tab[0]);
+					String e1 = recursiveCompute(input);
+					_l.info(" E1 is : " + e1);
 					_l.info("Trying to define E2 : ");
-					newInput = Arrays.copyOf(input, input.length-2);
-					String[] e2Tab = recursiveCompute(newInput);
-					_l.info(" E2 is : " + e2Tab[0]);
+					String e2 = recursiveCompute(input);
+					_l.info(" E2 is : " + e2);
 					
-					Float operationResult = operators.get(input[input.length-1]).apply(Float.parseFloat(e2Tab[0]), Float.parseFloat(e1Tab[0]));
-					_l.info(" Executing operation " + e2Tab[0] + input[input.length-1] + e1Tab[0] + " = " + operationResult);
+					Float operationResult = operators.get(firstEntry).apply(Float.parseFloat(e2), Float.parseFloat(e1));
+					_l.info(" Executing operation " + e2 + firstEntry + e1 + " = " + operationResult);
 					
-					result[0] = ""+operationResult;
-					
+					result = ""+operationResult;
+										
 				}else{
 					_l.info(" Could not identify operator ");
-					result[0] = input[input.length-1] +" character could not be interpreted";
+					result = firstEntry +" character could not be interpreted";
 				}
 			}
 		}
-		_l.info("recursiveCompute result :" + result[0]);
+
+		
+		_l.info("recursiveCompute result :" + result);
 		return result;
 	}
 	
